@@ -1,0 +1,84 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local isActive = false
+local dragging = false
+local dragOffset = Vector2.new()
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = PlayerGui
+
+local Btn = Instance.new("TextButton")
+Btn.Size = UDim2.new(0,140,0,50)
+Btn.Position = UDim2.new(0.05,0,0.3,0)
+Btn.BackgroundColor3 = Color3.new(0.2,0.7,0.3)
+Btn.Text = "开启"
+Btn.TextColor3 = Color3.new(1,1,1)
+Btn.Font = Enum.Font.SourceSansBold
+Btn.TextSize = 24
+Btn.Parent = ScreenGui
+
+-- 叉号按钮
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0,24,0,24)
+CloseBtn.Position = UDim2.new(1, -22, 0, -6)
+CloseBtn.BackgroundColor3 = Color3.new(0.9,0.15,0.15)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 18
+CloseBtn.Parent = Btn
+
+local function loop()
+	while isActive do
+		local args = {"collectOrb","Yellow Orb","City"}
+		ReplicatedStorage.rEvents.orbEvent:FireServer(unpack(args))
+		task.wait(0.01)
+	end
+end
+
+Btn.MouseButton1Click:Connect(function()
+	isActive = not isActive
+	if isActive then
+		Btn.Text = "关闭"
+		Btn.BackgroundColor3 = Color3.new(0.8,0.2,0.2)
+		task.spawn(loop)
+	else
+		Btn.Text = "开启"
+		Btn.BackgroundColor3 = Color3.new(0.2,0.7,0.3)
+	end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+	isActive = false
+	ScreenGui:Destroy()
+end)
+
+-- ====== 【重写稳定拖拽代码】 ======
+Btn.MouseButton1Down:Connect(function()
+	-- 跳过点叉号
+	local mousePos = UserInputService:GetMouseLocation()
+	local closeMin = CloseBtn.AbsolutePosition
+	local closeMax = closeMin + CloseBtn.AbsoluteSize
+	if mousePos.X >= closeMin.X and mousePos.X <= closeMax.X and mousePos.Y >= closeMin.Y and mousePos.Y <= closeMax.Y then
+		return
+	end
+	dragging = true
+	dragOffset = mousePos - Btn.AbsolutePosition
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local mousePos = UserInputService:GetMouseLocation()
+		local newPos = mousePos - dragOffset
+		Btn.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
